@@ -2,6 +2,7 @@ from math import *
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import pandas as pd
 
 
 # Constants
@@ -28,28 +29,31 @@ links = [
 
 fixed_points = {
     'O1': (0, c),
-    'O2': (0, 0),
+    'O2': (0,0 ),
     'O3': (a + b, c),
 }
 
+
 def circleintersection(xa, ya, xb, yb, AC, BC):
-    d_sq = (xa - xb)**2 + (ya - yb)**2
-    if d_sq == 0:
+    d = sqrt((xa - xb)**2 + (ya - yb)**2)
+
+    # No intersection cases
+    if d > AC + BC or d < abs(AC - BC):  # No solution
         return None
-    d = sqrt(d_sq)
-    a = (AC**2 - BC**2 + d_sq) / (2 * d)
-    h_sq = AC**2 - a**2
-    if h_sq < 0:
+    if d == 0 and AC == BC:  # Infinite solutions
         return None
-    h = sqrt(h_sq)
+    
+    # Compute intersection points
+    a = (AC**2 - BC**2 + d**2) / (2 * d)
+    h = sqrt(AC**2 - a**2)
     x3 = xa + a * (xb - xa) / d
     y3 = ya + a * (yb - ya) / d
-    sol1 = (x3 + h * (yb - ya) / d, y3 - h * (xb - xa) / d)
-    sol2 = (x3 - h * (yb - ya) / d, y3 + h * (xb - xa) / d)
-    if sol2[1] > sol1[1]:
-        return sol2
-    else:
-        return sol1
+
+    sol1 = [x3 + h * (yb - ya) / d, y3 - h * (xb - xa) / d]
+    sol2 = [x3 - h * (yb - ya) / d, y3 + h * (xb - xa) / d]
+
+    # Return max solution
+    return max(sol1, sol2)
 
 def xA(t):
     return O1A * cos(omega_O1A * t + phi)
@@ -63,37 +67,37 @@ def xF(t):
 def yF(t):
     xe = xE(t)
     ye = yE(t)
-    return (2*ye+sqrt(4*ye**2 - 4*(ye**2 + a**2 -2*a*xe + xe**2 -EF**2)))/2
+    return (2*ye+sqrt(4*ye**2 - 4*(ye**2 + a**2 -2*a*xe + xe**2 - EF**2)))/2
 
 def xE(t):
     xc = xC(t)
     xd = xD(t)
-    return (xd - xc) / 2 + xc if xc is not None and xd is not None else None
+    return (xd + xc)/2
 
 def yE(t):
     yc = yC(t)
     yd = yD(t)
-    return (yc - yd) / 2 + yd if yc is not None and yd is not None else None
+    return (yd + yc)/2
 
 def xB(t):
     xa, ya = xA(t), yA(t)
     xo, yo = fixed_points['O2']
     intersection = circleintersection(xa, ya, xo, yo, AB, O2B)
-    return intersection[0] if intersection else None
+    return intersection[0]
 
 def yB(t):
     xa, ya = xA(t), yA(t)
     xo, yo = fixed_points['O2']
     intersection = circleintersection(xa, ya, xo, yo, AB, O2B)
-    return intersection[1] if intersection else None
+    return intersection[1] 
 
 def xC(t):
     xb, yb = xB(t), yB(t)
     if xb is None or yb is None:
         return None
     xo, yo = fixed_points['O2']
-    intersection = circleintersection(xb, yb, xo, yo, BC, O2B)
-    return intersection[0] if intersection else None
+    intersection = circleintersection(xb, yb, xo, yo, BC, O2C)
+    return intersection[0] 
 
 def yC(t):
     xb, yb = xB(t), yB(t)
@@ -101,7 +105,7 @@ def yC(t):
         return None
     xo, yo = fixed_points['O2']
     intersection = circleintersection(xb, yb, xo, yo, BC, O2C)
-    return intersection[1] if intersection else None
+    return intersection[1] 
 
 def xD(t):
     xc, yc = xC(t), yC(t)
@@ -109,7 +113,7 @@ def xD(t):
         return None
     xo, yo = fixed_points['O3']
     intersection = circleintersection(xc, yc, xo, yo, CD, O3D)
-    return intersection[0] if intersection else None
+    return intersection[0] 
 
 def yD(t):
     xc, yc = xC(t), yC(t)
@@ -117,7 +121,7 @@ def yD(t):
         return None
     xo, yo = fixed_points['O3']
     intersection = circleintersection(xc, yc, xo, yo, CD, O3D)
-    return intersection[1] if intersection else None
+    return intersection[1] 
 
 def get_position(t, point):
     if point in fixed_points:
@@ -130,10 +134,10 @@ def get_position(t, point):
         return (xC(t), yC(t))
     elif point == 'D':
         xd, yd = xD(t), yD(t)
-        return (xd, yd) if xd is not None and yd is not None else (np.nan, np.nan)
+        return (xd, yd) 
     elif point == 'E':
         xe, ye = xE(t), yE(t)
-        return (xe, ye) if xe is not None and ye is not None else (np.nan, np.nan)
+        return (xe, ye) 
     elif point == 'F':
         return (xF(t), yF(t))
     else:
@@ -234,6 +238,13 @@ plot_data = {
     'CD_omega': [],
     'O2C_omega': [],
     'O3D_omega': [],
+    # Position data for each point
+    'A_x': [], 'A_y': [],
+    'B_x': [], 'B_y': [],
+    'C_x': [], 'C_y': [],
+    'D_x': [], 'D_y': [],
+    'E_x': [], 'E_y': [],
+    'F_x': [], 'F_y': [],
 }
 
 def init():
@@ -309,6 +320,11 @@ def update(frame):
     
     # Collect data for plots
     plot_data['t'].append(t)
+    for point in ['A', 'B', 'C', 'D', 'E', 'F']:
+        x, y = positions[point]
+        plot_data[f'{point}_x'].append(x)
+        plot_data[f'{point}_y'].append(y)
+
     for point in ['B', 'C', 'E', 'F']:
         vx, vy = velocities.get(point, (0.0, 0.0))
         plot_data[f'{point}_vx'].append(vx)
@@ -327,7 +343,25 @@ times = np.linspace(0, t_max , 100)
 ani = FuncAnimation(fig, update, frames=times, init_func=init, blit=True, interval=50, repeat=False)
 
 plt.show()
+time_array = np.array(plot_data['t'])
+positions = {
+    'A': np.column_stack((plot_data['A_x'], plot_data['A_y'])),
+    'B': np.column_stack((plot_data['B_x'], plot_data['B_y'])),
+    # Similarly for C, D, E, F
+}
+df_positions = pd.DataFrame({
+    'Time (s)': plot_data['t'],
+    'A_x': plot_data['A_x'], 'A_y': plot_data['A_y'],
+    'B_x': plot_data['B_x'], 'B_y': plot_data['B_y'],
+    'C_x': plot_data['C_x'], 'C_y': plot_data['C_y'],
+    'D_x': plot_data['D_x'], 'D_y': plot_data['D_y'],
+    'E_x': plot_data['E_x'], 'E_y': plot_data['E_y'],
+    'F_x': plot_data['F_x'], 'F_y': plot_data['F_y'],
+})
 
+# Display the first few rows of the table
+print(df_positions)
+df_positions.to_csv('positions_table.csv', index=False)
 # Post-animation plotting
 t_array = np.array(plot_data['t'])
 
@@ -347,7 +381,7 @@ for link_name in ['CD', 'O2C', 'O3D']:
 
 # Create plots
 plt.figure(figsize=(15, 10))
-
+ani.save('mechanism_animation.mp4', writer='ffmpeg', fps=30)
 # Linear speeds
 plt.subplot(2, 2, 1)
 plt.plot(t_array, np.sqrt(np.array(plot_data['B_vx'])**2 + np.array(plot_data['B_vy'])**2), label='B')
