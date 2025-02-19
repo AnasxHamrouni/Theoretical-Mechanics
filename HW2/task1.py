@@ -361,7 +361,8 @@ df_positions = pd.DataFrame({
 
 # Display the first few rows of the table
 print(df_positions)
-df_positions.to_csv('positions_table.csv', index=False)
+# Save points positions for debugging
+# df_positions.to_csv('positions_table.csv', index=False)
 # Post-animation plotting
 t_array = np.array(plot_data['t'])
 
